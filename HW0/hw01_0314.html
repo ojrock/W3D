@@ -12,13 +12,13 @@
 
 </head>
 <body>
-	<h> Homework 1 (<a href="https://jsfiddle.net/Ojrock/3j398a42/"> jsfiddle)</h>
+	<h1> Homework 1 (<a href="https://jsfiddle.net/Ojrock/3j398a42/" target="_blank"> jsfiddle)</h1>
 
-<div id='l0' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px;  text-align: center;'>
+<div id='L0' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px;  text-align: center;'>
 Light 0
 </div>
 
-<div id='l1' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px; left: 700px;  text-align: center;'>
+<div id='L1' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px; left: 700px;  text-align: center;'>
 Light 1
 </div>
 
@@ -36,7 +36,7 @@ function Light(name) {
   if (name === undefined)
     Light.serial = Light.serial !== undefined ? ++Light.serial : 0;
 
-  var name = '#' + name || 'l' + Light.serial;
+  var name = '#L' + name || 'l' + Light.serial;
 
 
   var status = false;
@@ -44,12 +44,12 @@ function Light(name) {
  	var	toggle = function() {
     status = !status;
     if(status === true) {
-      	$(name).css('backgroundColor', 'yellow');
+      	$(name).css('backgroundColor', 'hsl(0, 67%, 58%)');
       $(name).text(name + ' is on ');
     }
     else {
-      	$(name).css('backgroundColor', 'gray');
-      $(name).text (name + ' is off');
+      	$(name).css('backgroundColor', 'hsl(126, 67%, 32%)');
+      $(name).text (name + ' is change');
     }
 
   }
@@ -62,8 +62,8 @@ function Light(name) {
   }
 }
 
-l0 = new Light('l0');
-l1 = new Light('l1');
+l0 = new Light('0');
+l1 = new Light('1');
 
   l0.toggleBlink();
 
