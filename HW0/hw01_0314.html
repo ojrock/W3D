@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#Click {
+  position: absolute;
+  top: 30%;
+  width: 100%;
+  padding: 3px;
+}
+</style>
+
+</head>
+<body>
+	<h> Homework 1 (<a href="https://jsfiddle.net/Ojrock/3j398a42/"> jsfiddle)</h>
+
+<div id='l0' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px;  text-align: center;'>
+Light 0
+</div>
+
+<div id='l1' style=' width:30%; border: 1px;  height: 120px; position: absolute; top: 150px; left: 700px;  text-align: center;'>
+Light 1
+</div>
+
+<div id='Click'>
+  <button id='toggle'>
+    Click here
+  </button>
+</div>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script>
+
+function Light(name) {
+  if (name === undefined)
+    Light.serial = Light.serial !== undefined ? ++Light.serial : 0;
+
+  var name = '#' + name || 'l' + Light.serial;
+
+
+  var status = false;
+
+ 	var	toggle = function() {
+    status = !status;
+    if(status === true) {
+      	$(name).css('backgroundColor', 'yellow');
+      $(name).text(name + ' is on ');
+    }
+    else {
+      	$(name).css('backgroundColor', 'gray');
+      $(name).text (name + ' is off');
+    }
+
+  }
+
+  this.check = function() {
+    return status;
+  }
+  this.toggleBlink = function() {
+    setInterval(function() {toggle();}, 500);
+  }
+}
+
+l0 = new Light('l0');
+l1 = new Light('l1');
+
+  l0.toggleBlink();
+
+
+$('#toggle').click(function() {
+  l0.toggleBlink();
+  l1.toggleBlink();
+});
+
+</script>
+</body>
+
+</html>
