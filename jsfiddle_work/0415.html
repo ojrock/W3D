@@ -48,7 +48,7 @@ function init() {
 	gridxz = new THREE.GridHelper (200, 20,'red','white');
 	scene.add (gridxz);
 
-  var ambient = new THREE.AmbientLight(0x444444);
+  var ambient = new THREE.PointLight(0x999999);
   scene.add(ambient);
 
   var directionalLight = new THREE.DirectionalLight(0xffffff);
