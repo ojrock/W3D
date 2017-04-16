@@ -65,11 +65,10 @@ function init() {
   };
 
   var onError = function(xhr) {};
-
   //THREE.Loader.Handlers.add(/\.dds$/i, new THREE.DDSLoader());
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('resources/');
+  mtlLoader.setPath('Resources/');
  	mtlLoader.load('1967-shelby-ford-mustang.mtl', function(materials) {
 
 
@@ -78,7 +77,7 @@ function init() {
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('resources/');
+    objLoader.setPath('Resources/');
     objLoader.load('1967-shelby-ford-mustang.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
