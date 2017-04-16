@@ -69,13 +69,13 @@ function init() {
 
   var mtlLoader = new THREE.MTLLoader();
 //  mtlLoader.setPath('Resources/');
- 	mtlLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resources/audi-r8-red.mtl', function(materials) {
+ 	mtlLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resoures/nissan-gt-r-nismo.mtl', function(materials) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
   //  objLoader.setPath('Resources/');
-    objLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resources/audi-r8-red.obj', function(object) {
+    objLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resoures/anissan-gt-r-nismo.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
 			scene.add (theObject);
