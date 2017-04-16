@@ -48,7 +48,7 @@ function init() {
 	gridxz = new THREE.GridHelper (200, 20,'red','white');
 	scene.add (gridxz);
 
-  var ambient = new THREE.PointLight(0x999999);
+  var ambient = new THREE.AmbientLight(0x999999);
   scene.add(ambient);
 
   var directionalLight = new THREE.DirectionalLight(0xffffff);
@@ -68,14 +68,14 @@ function init() {
   //THREE.Loader.Handlers.add(/\.dds$/i, new THREE.DDSLoader());
 
   var mtlLoader = new THREE.MTLLoader();
-//  mtlLoader.setPath('Resources/');
- 	mtlLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resoures/camero-2010-low-poly.mtl', function(materials) {
+  mtlLoader.setPath('Resources/');
+ 	mtlLoader.load('camero-2010-low-poly.mtl', function(materials) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-  //  objLoader.setPath('Resources/');
-    objLoader.load('https://ojrock.github.io/W3D/jsfiddle_work/Resoures/camero-2010-low-poly.obj', function(object) {
+    objLoader.setPath('Resources/');
+    objLoader.load('camero-2010-low-poly.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
 			scene.add (theObject);
