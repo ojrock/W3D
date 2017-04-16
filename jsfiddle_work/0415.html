@@ -29,7 +29,16 @@ body {
 <script>
 var camera, scene, renderer;
 var controls;
+var stop = true, dir = 0;
 
+var pos, vel, force;
+var angle = 0,  pow = 30;
+var mass = 1;
+
+
+var car = new THREE.Object3D();
+var clock = new THREE.Clock();
+var keyboard = new KeyboardState();
 
 init();
 animate();
@@ -37,23 +46,24 @@ animate();
 
 function init() {
 
-  container = document.createElement('div');
-  document.body.appendChild(container);
 
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
-  camera.position.z = 250;
+	  container = document.createElement('div');
+	  document.body.appendChild(container);
 
-  scene = new THREE.Scene();
+	  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
+	  camera.position.z = 250;
 
-	gridxz = new THREE.GridHelper (200, 20,'red','white');
-	scene.add (gridxz);
+	  scene = new THREE.Scene();
 
-  var ambient = new THREE.AmbientLight(0x999999);
-  scene.add(ambient);
+		gridxz = new THREE.GridHelper (200, 20,'red','white');
+		scene.add (gridxz);
 
-  var directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(0, 1, 1).normalize();
-  scene.add(directionalLight);
+	  var ambient = new THREE.AmbientLight(0x999999);
+	  scene.add(ambient);
+
+	  var directionalLight = new THREE.DirectionalLight(0xffffff);
+	  directionalLight.position.set(0, 1, 1).normalize();
+	  scene.add(directionalLight);
 
   // model
 
@@ -78,6 +88,11 @@ function init() {
     objLoader.load('camero-2010-low-poly.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
+
+
+			car = theObject.clone();
+			scene.add(car);
+
 			scene.add (theObject);
 
 			scene.add (new THREE.BoxHelper (theObject));
@@ -103,6 +118,10 @@ function init() {
 
 	controls = new THREE.OrbitControls(camera, renderer.domElement);
 	camera.position.z = 200;
+///////////////////////////
+	pos = new THREE.Vector3();
+  vel = new THREE.Vector3();
+  force = new THREE.Vector3();
 
   window.addEventListener('resize', onWindowResize, false);
 
@@ -149,29 +168,78 @@ function unitize (object, targetSize) {
 }
 
 
-function onWindowResize() {
 
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
+function computeForce() {
+  // engine force
+  if (stop) {
+    force = new THREE.Vector3(0, 0, 0);
+    pow = 25;
+  } else {
+    force = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), angle + dir).multiplyScalar(pow);
+  }
+  // resistance force
+  var alpha = 2.00;
+  force.add(vel.clone().multiplyScalar(-alpha));
 }
 
-
 function animate() {
+  keyboard.update();
 
-	controls.update();
+  if (keyboard.down("home")) {
+    stop = false;
+  }
+  if (keyboard.down("space")) {
+    stop = true;
+  }
+  if (keyboard.pressed("w")  || keyboard.pressed("W")) {
+    if (pow + 10 > 300) pow = 300;
+    else pow += 10;
+  }
+  else if (keyboard.pressed("s")  || keyboard.pressed("S")) {
+    if (pow - 10 < 0) pow = 0;
+    else pow -= 10;
+  }
+
+  if (keyboard.pressed("d")  || keyboard.pressed("D")) {
+    dir = 100;
+  }
+  else if (keyboard.pressed("a")  || keyboard.pressed("A")) {
+    dir = -100;
+  }
+  else dir = 0;
+
+  computeForce();
+  var dt = clock.getDelta(); // delta-time
+  vel.add(force.clone().multiplyScalar(dt / mass));// vel = vel + force/mass * dt
+  pos.add(vel.clone().multiplyScalar(dt));   // pos = pos + vel * dt
+
+  if (vel.length() > 0.001) {
+    angle = Math.atan2(-vel.z, vel.x);
+  }
+
+  // copy to cylinder
+  car.position.copy(pos);
+  car.rotation.y = angle;
+  controls.update();
+
   requestAnimationFrame(animate);
   render();
 
 }
 
 function render() {
-
   renderer.render(scene, camera);
-
 }
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+// important to add this
+// in jsfiddle!
+window.focus();
 </script>
 </body>
 
