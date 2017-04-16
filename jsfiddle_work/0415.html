@@ -43,8 +43,6 @@ function init() {
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 20000);
   camera.position.z = 250;
 
-  // scene
-
   scene = new THREE.Scene();
 
 	gridxz = new THREE.GridHelper (200, 20,'red','white');
@@ -72,23 +70,22 @@ function init() {
 
   var mtlLoader = new THREE.MTLLoader();
   mtlLoader.setPath('resources/');
- 	mtlLoader.load('penguin.mtl', function(materials) {
+ 	mtlLoader.load('1967-shelby-ford-mustang.mtl', function(materials) {
+
+
 
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.setPath('resources/');
-    objLoader.load('penguin.obj', function(object) {
+    objLoader.load('1967-shelby-ford-mustang.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
 			scene.add (theObject);
 
 			scene.add (new THREE.BoxHelper (theObject));
 
-
-			//////// MATERIAL ADJUSTMENT for porsche ///////////////
-			// transparent window: double-side fix
 			object.traverse (
 				function(mesh) {
 					if (mesh instanceof THREE.Mesh) {
