@@ -68,13 +68,13 @@ function init() {
   //THREE.Loader.Handlers.add(/\.dds$/i, new THREE.DDSLoader());
 
   var mtlLoader = new THREE.MTLLoader();
-  mtlLoader.setPath('Resources/');
+  mtlLoader.setPath('Resoures/');
  	mtlLoader.load('camero-2010-low-poly.mtl', function(materials) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
-    objLoader.setPath('Resources/');
+    objLoader.setPath('Resoures/');
     objLoader.load('camero-2010-low-poly.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
