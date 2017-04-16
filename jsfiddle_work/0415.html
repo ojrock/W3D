@@ -69,13 +69,13 @@ function init() {
 
   var mtlLoader = new THREE.MTLLoader();
   mtlLoader.setPath('Resources/');
- 	mtlLoader.load('car.mtl', function(materials) {
+ 	mtlLoader.load('1967-shelby-ford-mustang.mtl', function(materials) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.setPath('Resources/');
-    objLoader.load('car.obj', function(object) {
+    objLoader.load('1967-shelby-ford-mustang.obj', function(object) {
 
 			var theObject =  unitize (object, 20);
 			scene.add (theObject);
