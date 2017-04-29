@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden;
+}
+
+</style>
+
+</head>
+<body>
+  <div id="info">Hw3
+  <br>
+  <button id='target'>
+    Switch
+  </button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
+<script>
+var camera, scene, renderer, ground, gtexture, light, controls;
+var raycaster;
+var mouse = new THREE.Vector2();
+var pickables = [];
+var slight = [];
+var wall = [];
+var car = [];
+var carTexl = [
+  'https://i.imgur.com/CW4klaK.png',
+  'https://i.imgur.com/TQ29DGO.png',
+  'https://i.imgur.com/Aq9Tlml.png',
+  'https://i.imgur.com/mNYO8J4.png'
+];
+var carTex = [];
+
+function makelight() {
+  var spotLight = new THREE.SpotLight();
+  spotLight.distance = 1200;
+  spotLight.angle = 0.5;
+  spotLight.penumbra = 0.6;
+  spotLight.castShadow = true;
+  spotLight.shadow.mapSize.width = 1024;
+  spotLight.shadow.mapSize.height = 1024;
+
+  spotLight.shadow.camera.near = 500;
+  spotLight.shadow.camera.far = 4000;
+  spotLight.shadow.camera.fov = 30;
+
+  return spotLight;
+}
+
+init();
+animate();
+
+function init() {
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 10000);
+  camera.position.set(200, 300, 300);
+  scene.add(camera);
+
+  light = new THREE.AmbientLight(0x999999);
+  scene.add(light);
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  document.body.appendChild(renderer.domElement);
+  raycaster = new THREE.Raycaster();
+  document.addEventListener('mousedown', onDocumentMouseDown, false);
+  document.addEventListener('mousemove', onDocumentMouseMove, false);
+  window.addEventListener('resize', onWindowResize, false);
+
+  //////////////////////////////////////////////////////////////////////
+  var wallMaterial = new THREE.MeshLambertMaterial({
+    color: 0xFFCC99
+  });
+  var wall_Geometry = new THREE.BoxGeometry(1, 100, 400);
+  var carGeometry = new THREE.PlaneGeometry(115, 65, 30, 30);
+
+  for (var i = 0; i < 4; i++) {
+    wall[i] = new THREE.Mesh(wall_Geometry, wallMaterial);
+    wall[i].position.y = 35;
+    wall[i].position.z = 0;
+    scene.add(wall[i]);
+    ///////////////////////////////////////////
+		loadCarTex(carTexl[i]);
+    car[i] = new THREE.Mesh(carGeometry, new THREE.MeshLambertMaterial({
+    side: THREE.DoubleSide
+    }));
+    scene.add(car[i]);
+    ///////////////////////////////////////////
+
+  }
+  wall[0].position.set(-200, 35, 0);
+  wall[1].position.set(200, 35, 0);
+  wall[2].rotation.y = Math.PI / 2;
+  wall[2].position.set(0, 35, 200);
+  wall[3].rotation.y = Math.PI / 2;
+  wall[3].position.set(0, 35, -200);
+  ///////////////////////////////////////////////////
+   car[0].position.set(-195, 35, 0);
+   car[0].rotation.y = Math.PI /2;
+   car[1].position.set(195, 35, 0);
+   car[1].rotation.y = -Math.PI / 2;
+   car[2].position.set(0, 35, 195);
+   car[2].rotation.y = Math.PI;
+   car[3].position.set(0, 35, -195);
+
+  ////////////////////////////////////////////////////////////////////
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400, 120, 120), new THREE.MeshLambertMaterial());
+  scene.add(ground);
+  ground.rotation.x = -Math.PI / 2;
+  loadTexture('https://i.imgur.com/pGIEwFk.jpg');
+  ////////////////////////////////////////////////////////////////////
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+
+  ground.receiveShadow = true;
+}
+
+function loadTexture(url) {
+  var loader = new THREE.TextureLoader();
+  loader.setCrossOrigin('');
+  loader.load(
+    url,
+    function(tex) {
+      console.log('texture loaded ...');
+      gtexture = tex; // for global access with Keypress
+    },
+  );
+}
+
+function loadCarTex(url){
+	var loader = new THREE.TextureLoader();
+  loader.setCrossOrigin('');
+  loader.load(
+  	url,
+    function(tex){
+    console.log('texture loaded ...');
+    carTex.push(tex);
+
+    }
+  )
+}
+
+function animate() {
+  controls.update();
+  if (gtexture !== undefined) {
+    ground.material.map = gtexture;
+    ground.material.needsUpdate = true;
+  }
+  if(carTex !== undefined){
+  	for(var i = 0;i<4;i++){
+    	car[i].material.map= carTex[i];
+      car[i].material.needsUpdate = true;
+    }
+  }
+  requestAnimationFrame(animate);
+  render();
+}
+
+function onDocumentMouseDown(event) {
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  var intersects = raycaster.intersectObjects(pickables);
+  if (intersects.length > 0) {
+    if (intersects[0].object.name === "cube1") alert("cube1");
+    else if (intersects[0].object.name === "cube2") alert("cube2");
+  }
+}
+
+function onDocumentMouseMove(event) {
+
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  var intersects = raycaster.intersectObjects(pickables);
+
+  if (intersects.length > 0) {
+    document.body.style.cursor = 'pointer';
+  } else {
+    document.body.style.cursor = 'auto';
+  }
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+function Switch() {
+
+}
+$('#target').click(
+  function() {
+    Switch();
+  }
+);
+
+
+</script>
+</body>
+
+</html>
