@@ -11,10 +11,19 @@
   color: #ffff00
 }
 
+#name {
+  position: absolute;
+  bottom: 50px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  font-size: 24px;
+  color: #ffffff
+}
+
 body {
   overflow: hidden;
 }
-
 </style>
 
 </head>
@@ -25,8 +34,11 @@ body {
     Switch
   </button>
 </div>
+<div id='name'>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
 
 <script>
@@ -35,7 +47,9 @@ var raycaster;
 var mouse = new THREE.Vector2();
 var pickables = [];
 var slight = [];
+var slight_b=[];
 var wall = [];
+var draw_b = [];
 var car = [];
 var carTexl = [
   'https://i.imgur.com/CW4klaK.png',
@@ -44,22 +58,6 @@ var carTexl = [
   'https://i.imgur.com/mNYO8J4.png'
 ];
 var carTex = [];
-
-function makelight() {
-  var spotLight = new THREE.SpotLight();
-  spotLight.distance = 1200;
-  spotLight.angle = 0.5;
-  spotLight.penumbra = 0.6;
-  spotLight.castShadow = true;
-  spotLight.shadow.mapSize.width = 1024;
-  spotLight.shadow.mapSize.height = 1024;
-
-  spotLight.shadow.camera.near = 500;
-  spotLight.shadow.camera.far = 4000;
-  spotLight.shadow.camera.fov = 30;
-
-  return spotLight;
-}
 
 init();
 animate();
@@ -92,20 +90,33 @@ function init() {
   });
   var wall_Geometry = new THREE.BoxGeometry(1, 100, 400);
   var carGeometry = new THREE.PlaneGeometry(115, 65, 30, 30);
-
+  var draw = new THREE.BoxGeometry(.1, 69, 120);
+  var draw_material = new THREE.MeshLambertMaterial({
+    color: 0xaa4433
+  });
   for (var i = 0; i < 4; i++) {
     wall[i] = new THREE.Mesh(wall_Geometry, wallMaterial);
     wall[i].position.y = 35;
     wall[i].position.z = 0;
     scene.add(wall[i]);
     ///////////////////////////////////////////
-		loadCarTex(carTexl[i]);
+    loadCarTex(carTexl[i]);
     car[i] = new THREE.Mesh(carGeometry, new THREE.MeshLambertMaterial({
-    side: THREE.DoubleSide
+      side: THREE.DoubleSide
     }));
+    car[i].name = 'car' + i;
+    console.log(car[i]);
+    pickables.push(car[i]);
     scene.add(car[i]);
+    draw_b[i] = new THREE.Mesh(draw, draw_material);
+    scene.add(draw_b[i]);
     ///////////////////////////////////////////
-
+    slight[i] = makelight();
+    slight_b[i]= buildSLightBody();
+    slight[i].target = car[i];
+    scene.add(slight[i]);
+    slight_b[i].eulerOrder = 'ZYX';
+    scene.add(slight_b[i]);
   }
   wall[0].position.set(-200, 35, 0);
   wall[1].position.set(200, 35, 0);
@@ -114,15 +125,33 @@ function init() {
   wall[3].rotation.y = Math.PI / 2;
   wall[3].position.set(0, 35, -200);
   ///////////////////////////////////////////////////
-   car[0].position.set(-195, 35, 0);
-   car[0].rotation.y = Math.PI /2;
-   car[1].position.set(195, 35, 0);
-   car[1].rotation.y = -Math.PI / 2;
-   car[2].position.set(0, 35, 195);
-   car[2].rotation.y = Math.PI;
-   car[3].position.set(0, 35, -195);
-
+  car[0].position.set(-197, 35, 0);
+  car[0].rotation.y = Math.PI / 2;
+  car[1].position.set(197, 35, 0);
+  car[1].rotation.y = -Math.PI / 2;
+  car[2].position.set(0, 35, 197);
+  car[3].position.set(0, 35, -197);
+  ////////////////////////////////////////////////////
+  draw_b[0].position.set(-197.5, 35, 0);
+  draw_b[1].position.set(197.5, 35, 0);
+  draw_b[2].position.set(0, 35, 197.5);
+  draw_b[2].rotation.y = -Math.PI / 2;
+  draw_b[3].position.set(0, 35, -197.5);
+  draw_b[3].rotation.y = Math.PI / 2;
+  ////////////////////////////////////////////////////
+  slight[0].position.set(50, 150, 0);
+  slight[1].position.set(-50, 150, 0);
+  slight[3].position.set(0, 150, 50);
+  slight[2].position.set(0, 150, -50);
   ////////////////////////////////////////////////////////////////////
+  slight_b[0].position.set(50, 150, 0);
+  slight_b[0].rotation.y=Math.PI/2;
+  slight_b[1].position.set(-50, 150, 0);
+  slight_b[1].rotation.y=-Math.PI/2;
+  slight_b[2].rotation.y=Math.PI;
+	slight_b[2].position.set(0, 150, -50);
+  slight_b[3].position.set(0, 150, 50);
+  /////////////////////////////////////////////////////////////////////
   ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400, 120, 120), new THREE.MeshLambertMaterial());
   scene.add(ground);
   ground.rotation.x = -Math.PI / 2;
@@ -134,6 +163,42 @@ function init() {
   ground.receiveShadow = true;
 }
 
+function makelight() {
+  var spotLight = new THREE.SpotLight();
+  spotLight.distance = 1200;
+  spotLight.angle = 0.37;
+  spotLight.penumbra = 0.8;
+  spotLight.castShadow = true;
+  spotLight.shadow.mapSize.width = 1024;
+  spotLight.shadow.mapSize.height = 1024;
+
+  spotLight.shadow.camera.near = 500;
+  spotLight.shadow.camera.far = 4000;
+  spotLight.shadow.camera.fov = 30;
+
+  return spotLight;
+}
+function buildSLightBody() {
+
+    var body = new THREE.Object3D();
+    var temp = new THREE.Object3D();
+    var mesh = new THREE.Mesh(new THREE.CylinderGeometry(10, 5, 20, 32, 1, true), new THREE.MeshLambertMaterial({
+      color: 0xffee9f,
+      side: THREE.DoubleSide
+    }));
+    var bottom = new THREE.Mesh(new THREE.CircleGeometry(5, 32), new THREE.MeshLambertMaterial({
+      color: 0xffee9f
+    }));
+    mesh.position.y = 10;
+    bottom.rotation.x = Math.PI / 2;
+
+    temp.add(mesh, bottom);
+    temp.rotation.x = Math.PI / 2;
+    body.add(temp);
+		body.rotation.x=Math.PI/4;
+    return body;
+
+  }
 function loadTexture(url) {
   var loader = new THREE.TextureLoader();
   loader.setCrossOrigin('');
@@ -142,19 +207,18 @@ function loadTexture(url) {
     function(tex) {
       console.log('texture loaded ...');
       gtexture = tex; // for global access with Keypress
-    },
+    }
   );
 }
 
-function loadCarTex(url){
-	var loader = new THREE.TextureLoader();
+function loadCarTex(url) {
+  var loader = new THREE.TextureLoader();
   loader.setCrossOrigin('');
   loader.load(
-  	url,
-    function(tex){
-    console.log('texture loaded ...');
-    carTex.push(tex);
-
+    url,
+    function(tex) {
+      console.log('texture loaded ...');
+      carTex.push(tex);
     }
   )
 }
@@ -165,9 +229,9 @@ function animate() {
     ground.material.map = gtexture;
     ground.material.needsUpdate = true;
   }
-  if(carTex !== undefined){
-  	for(var i = 0;i<4;i++){
-    	car[i].material.map= carTex[i];
+  if (carTex !== undefined) {
+    for (var i = 0; i < 4; i++) {
+      car[i].material.map = carTex[i];
       car[i].material.needsUpdate = true;
     }
   }
@@ -184,8 +248,10 @@ function onDocumentMouseDown(event) {
 
   var intersects = raycaster.intersectObjects(pickables);
   if (intersects.length > 0) {
-    if (intersects[0].object.name === "cube1") alert("cube1");
-    else if (intersects[0].object.name === "cube2") alert("cube2");
+    if (intersects[0].object.name === "car0") $('#name').text('car0');
+    else if (intersects[0].object.name === "car1") $('#name').text('car1');
+    else if (intersects[0].object.name === "car2") $('#name').text('car2');
+    else if (intersects[0].object.name === "car3") $('#name').text('car3');
   }
 }
 
@@ -217,16 +283,15 @@ function render() {
 }
 
 function Switch() {
-
+  for (var i = 0; i < 4; i++) {
+    slight[i].intensity *= -.9;
+  }
 }
 $('#target').click(
   function() {
     Switch();
   }
 );
-
-
 </script>
 </body>
-
 </html>
