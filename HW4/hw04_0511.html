@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 2%;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden;
+}
+
+</style>
+
+</head>
+<body>
+  <h1 style="text-align:center"> Homework 4  </h1>
+<hr>
+<div id="container" style="float:left; background:pink; width:60vw; height:60vw"></div>
+<div id="gui" style="float:right; background:green; width:35vw; height:60vw">
+  <button id='clear' style="width:45%">Clear</button>
+  <button id='save' style="width:45%">Save</button>
+  <button id='restore' style="width:45%">Restore</button>
+  <br> Type
+  <br>
+  <input type="radio" id='s1' name='geom' value='TorusKnot'> TorusKnot
+  <br>
+  <input type="radio" id='s2' name='geom' value='sphere'> Sphere
+  <br>
+  <br> Material
+  <br>
+  <input type="radio" id='m1' name='mat' value='Basic'>Basic
+  <br>
+  <input type="radio" id='m2' name='mat' value='Normal'>Normal
+  <br>
+  <br> Color (for Basic)
+  <br>
+  <input type="radio" id='c1' name='color' value='skyblue'>skyblue
+  <br>
+  <input type="radio" id='c2' name='color' value='pink'>pink
+  <br>
+  <br>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+
+<script>
+  var scene, renderer, camera;
+  var controls;
+  var meshl, angle = 0,
+    turn = false;
+  var pickplane;
+  var mesh = [];
+  var raycaster = new THREE.Raycaster();
+  var mouse = new THREE.Vector2();
+
+  init();
+  animate();
+
+  $('#clear').click(function() {
+
+    mesh.forEach(function(mesh) {
+      scene.remove(mesh);
+    });
+    mesh = [];
+  });
+
+  $('#save').click(function() {
+
+    var states = [];
+    mesh.forEach(function(mesh) {
+      states.push(mesh.name);
+    });
+    localStorage.setItem('stateStr', JSON.stringify(states));
+  });
+
+  $('#restore').click(function() {
+
+    var states = JSON.parse(localStorage.getItem('stateStr'));
+    states.forEach(function(stateStr) {
+      console.log(stateStr);
+      var state = JSON.parse(stateStr);
+      buildmesh(new THREE.Vector3(state.pos[0], 0, state.pos[1]));
+    });
+  });
+
+
+  function init() {
+    var width = $('#container').innerWidth();
+    var height = $('#container').innerHeight();
+
+    scene = new THREE.Scene();
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(width, height);
+    renderer.setClearColor(0x888888);
+    $('#container').append(renderer.domElement);
+
+    var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+    scene.add(gridXZ);
+
+    camera = new THREE.PerspectiveCamera(50, width / height, 1, 1000);
+    camera.position.set(0,125,250) ;
+
+    // var geometry = new THREE.BoxGeometry(100, 20, 20);
+    // var material = new THREE.MeshBasicMaterial();
+
+    // mesh = new THREE.Mesh(geometry, material);
+    //scene.add(mesh);
+    /////////////////////////////////
+    var cyl_geom = new THREE.RingGeometry(2, 5, 32);
+    var cyl_mat = new THREE.MeshBasicMaterial({
+      color: 0xff3333,
+    });
+    cyl = new THREE.Mesh(cyl_geom, cyl_mat);
+    cyl.rotation.x = -Math.PI / 2;
+    cyl.position.set(-20, 0, 20);
+    scene.add(cyl);
+
+    pickplane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200),new THREE.MeshBasicMaterial());
+    pickplane.rotation.x = -Math.PI / 2;
+    scene.add(pickplane);
+    pickplane.material.visible = false;
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    window.addEventListener('resize', onWindowResize, false);
+    window.addEventListener('mousemove', onDocumentMouseMove, false);
+    window.addEventListener('mousedown', onDocumentMouseDown, false);
+    window.addEventListener('resize', onWindowResize, false);
+  }
+
+
+  function onWindowResize() {
+    var width = $('#container').innerWidth();
+    var height = $('#container').innerHeight();
+
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+  }
+
+  function animate() {
+    controls.update();
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+
+  function onDocumentMouseMove(event) {
+
+    event.preventDefault();
+
+    var viewportPos = $('#container').get(0).getBoundingClientRect();
+    mouse.x = ((event.clientX - viewportPos.left) / $('#container').innerWidth()) * 2 - 1;
+    mouse.y = -((event.clientY - viewportPos.top) / $('#container').innerHeight()) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObject(pickplane);
+    if (intersects.length > 0) {
+      cyl.position.copy(intersects[0].point);
+      cyl.position.y = 2;
+    }
+  }
+
+  function onDocumentMouseDown(event) {
+  	var local_light;
+    event.preventDefault();
+
+    var viewportPos = $('#container').get(0).getBoundingClientRect();
+    mouse.x = ((event.clientX - viewportPos.left) / $('#container').innerWidth()) * 2 - 1;
+    mouse.y = -((event.clientY - viewportPos.top) / $('#container').innerHeight()) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObject(pickplane);
+    if (intersects.length > 0) {
+      cyl.position.copy(intersects[0].point);
+      buildmesh( intersects[0].point);
+    }
+  }
+
+  function buildmesh(pos){
+  	meshl=  new THREE.Mesh(new THREE.SphereGeometry(10, 20, 20), new THREE.MeshNormalMaterial());
+    mesh.push(meshl);
+    var prop = {
+      pos: [pos.x, pos.z]
+    };
+    meshl.name = JSON.stringify(prop);
+  	scene.add(meshl);
+  	meshl.position.copy(pos);
+
+  }
+
+  $("#s1").click(function() {
+  	for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].geometry = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+  });
+
+  $("#s2").click(function() {
+  	for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].geometry = new THREE.SphereGeometry(10, 20, 20);
+  });
+
+  $("#c1").click(function() {
+  	for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].material.color = new THREE.Color('skyblue');
+  });
+
+  $("#c2").click(function() {
+  	for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].material.color = new THREE.Color('pink');
+  });
+
+  $("#m1").click(function() {
+    for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].material = new THREE.MeshBasicMaterial();
+  });
+
+  $("#m2").click(function() {
+    for(var i = 0 ;i<mesh.length;i++)
+    	mesh[i].material = new THREE.MeshNormalMaterial();
+  });
+
+</script>
+</body>
+</html>
