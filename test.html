@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden;
+}
+
+</style>
+
+</head>
+<body>
+  <div id="info">Picking Demo
+  <br/> press ENTER to change camera
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="http://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
+<script>
+var scene, renderer, light, cube1, cube2, sphere;
+var raycaster;
+var mouse = new THREE.Vector2();
+var pickables = [];
+var keyboard = new KeyboardState();
+var camera, cameraP, cameraO, controls, controls2;
+
+init();
+animate();
+
+function init() {
+  scene = new THREE.Scene();
+
+  cameraP = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  cameraO = new THREE.OrthographicCamera(-100, 100, 100, -100, -10, 1000);
+  cameraP.position.z = 500;
+  cameraO.position.z = 500;
+
+  camera = cameraP;
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(cameraP, renderer.domElement);
+  controls2 = new THREE.OrbitControls(cameraO, renderer.domElement);
+
+  light = new THREE.PointLight(0xffffff);
+  light.position.set(100, 300, 200);
+  scene.add(light);
+  var grid = new THREE.GridHelper(200, 20, 'red', 'white');
+  scene.add(grid);
+
+  //////////////////////////////////////////////////////////
+  var cube1 = new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20),
+    new THREE.MeshLambertMaterial({
+      color: 0xff1234
+    }));
+  cube1.position.x = -60;
+  scene.add(cube1);
+
+  cube2 = cube1.clone();
+  cube2.material = new THREE.MeshLambertMaterial({
+    color: 0x2134ff
+  });
+  cube2.position.x = 60;
+  scene.add(cube2);
+  pickables.push(cube1, cube2);
+
+  sphere = new THREE.Mesh(new THREE.SphereGeometry(10), new THREE.MeshLambertMaterial());
+  scene.add(sphere);
+
+  cube1.name = "cube1";
+  cube2.name = "cube2";
+
+  raycaster = new THREE.Raycaster();
+  document.addEventListener('mousedown', onDocumentMouseDown, false);
+  document.addEventListener('mousemove', onDocumentMouseMove, false);
+}
+
+function onDocumentMouseDown(event) {
+
+  // PICKING DETAILS:
+  // convert mouse.xy = [-1,1]^2 (NDC)
+  // unproject (mouse.xy, 1) to a point on the far plane (in world coordinate)
+  // set raycaster (origin, direction)
+  // find intersection objects, (closest first)
+  // each record as
+  // [ { distance, point, face, faceIndex, object }, ... ]
+
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  // if recursive set to true, can go deeper into object3D hierarchy
+  //  var intersects = raycaster.intersectObjects( pickables, true );
+  var intersects = raycaster.intersectObjects(pickables);
+  if (intersects.length > 0) {
+    if (intersects[0].object.name === "cube1") alert("cube1");
+    else if (intersects[0].object.name === "cube2") alert("cube2");
+  }
+
+}
+
+/////////////////////////////////////////////////////
+// change cursor style
+function onDocumentMouseMove(event) {
+  event.preventDefault();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+
+  var intersects = raycaster.intersectObjects(pickables);
+
+  if (intersects.length > 0) {
+    document.body.style.cursor = 'pointer';
+  } else {
+    document.body.style.cursor = 'auto';
+  }
+}
+
+function animate() {
+  controls.update();
+  controls2.update();
+
+  this.useOrtho = (this.useOrtho !== undefined) ? this.useOrtho : false;
+
+  keyboard.update();
+  if (keyboard.down("enter")) {
+    console.log('press ENTER');
+    this.useOrtho = !this.useOrtho;
+  }
+
+  camera = this.useOrtho ? cameraO : cameraP;
+
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+// important to add this
+// in jsfiddle!
+window.focus();
+
+
+</script>
+</body>
+
+</html>
