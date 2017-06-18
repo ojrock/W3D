@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+
+body {
+  overflow: hidden;
+}
+
+</style>
+
+</head>
+<body>
+  <div id="info">Picking Demo
+  <br/> press ENTER to change camera
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="http://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
+<script>
+var camera, scene, renderer, light, controls;
+var plane;
+var tank;
+var R = 80;
+var change = 0;
+var go = 0;
+var faxs = new THREE.Object3D();
+var angle= 0;
+var asix0;
+var laser;
+var keyboard = new KeyboardState();
+var raylaser = new THREE.Raycaster();
+var pickables = [];
+var target ;
+
+init();
+animate();
+
+function buildTank() {
+	var tank = new THREE.Object3D();
+  var normalMat = new THREE.MeshNormalMaterial();
+
+  var body = new THREE.Mesh (new THREE.BoxGeometry (15,3,10), normalMat);
+  body.position.y=1.5;
+  tank.add (body);
+	return tank;
+}
+
+function init() {
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100000);
+  camera.position.z = 500;
+  scene.add(camera);
+
+  light = new THREE.PointLight(0xffffff);
+  light.position.set(100, 300, 200);
+  scene.add(light);
+
+  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+  scene.add(gridXZ);
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  document.body.appendChild(renderer.domElement);
+  ////////////////////////////////////////////////////////////////////////
+  tank = buildTank();
+  axis0 = new THREE.Mesh (new THREE.CylinderGeometry (1,1,10), new THREE.MeshBasicMaterial({color:0xff0000}));
+	axis0.position.x=4;
+  axis0.rotation.z=-Math.PI/2;
+
+  var tower = new THREE.Mesh (new THREE.SphereGeometry( 3, 32, 32 ), new THREE.MeshNormalMaterial());
+	faxs.add(tower);
+  faxs.add(axis0);
+  faxs.position.y=5;
+ 	tank.add(faxs);
+
+  scene.add (tank);
+
+  ////////////////////////////////////////////
+
+  target = new THREE.Mesh(new THREE.BoxGeometry(15,15,15),new THREE.MeshNormalMaterial());
+  scene.add(target);
+  target.position.set(50,50,50);
+
+  pickables.push(target);
+}
+
+function Matrix4Update(newPos, newDir) {
+	var localX = newDir.clone();
+  var localY = new THREE.Vector3 (0,1,0);
+  var localZ = new THREE.Vector3();
+  localZ.crossVectors (localX, localY);
+  tank.matrix.makeBasis (localX, localY, localZ);
+  tank.matrix.setPosition (newPos);
+  tank.matrixAutoUpdate = false;
+}
+
+function animate() {
+
+	keyboard.update();
+
+  if (keyboard.pressed("W")) {
+    go += 3;
+    faxs.remove(laser);
+  }
+
+  if (keyboard.pressed("A")) {
+    change += 0.1;
+    faxs.remove(laser);
+  }
+
+  if (keyboard.pressed("D")) {
+    change += -0.1;
+    faxs.remove(laser);
+  }
+  if(keyboard.pressed("J")){
+  	angle+=0.05;
+    faxs.rotation.z=angle;
+  }
+ if(keyboard.pressed("K")){
+  	angle-=0.05;
+    faxs.rotation.z=angle;
+  }
+  if(keyboard.down("space")){
+    laser = makeLaser();
+    faxs.add(laser);
+  }
+  raytest();
+
+
+	var newPos = tank.localToWorld (new THREE.Vector3 (go, 0, 0));
+  var newDir = new THREE.Vector3 (1, 0, 0);
+  newDir.applyAxisAngle ( new THREE.Vector3(0, 1, 0), change );
+  Matrix4Update(newPos, newDir);
+ 	go=0;
+  controls.update();
+  requestAnimationFrame(animate);
+  render();
+}
+
+function makeLaser(){
+  var laserbody = axis0.clone().position;
+  var lineGeometry = new THREE.Geometry();
+  lineGeometry.vertices.push( new THREE.Vector3(laserbody.x,laserbody.y,laserbody.z), new THREE.Vector3(laserbody.x*5,laserbody.y*5,laserbody.z*5) ,new THREE.Vector3(laserbody.x*40,laserbody.y*40,laserbody.z*40) );
+  lineGeometry.computeLineDistances();
+  var lineMaterial = new THREE.LineDashedMaterial( { color: 0x0000ff, dashSize: 3, gapSize: 2 } );
+  var line = new THREE.Line( lineGeometry, lineMaterial );
+
+  return line;
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+function raytest(){
+  var laserdir = axis0.clone().localToWorld(new THREE.Vector3(0,1,0)).sub(axis0.clone().localToWorld(new THREE.Vector3(0,0,0)));
+  raylaser.set(axis0.localToWorld(new THREE.Vector3(0,1,0)), laserdir);
+  console.log(raylaser);
+  var intersects = raylaser.intersectObjects(pickables);
+  if (intersects.length > 0) {
+      pickables[0].material  = new THREE.MeshBasicMaterial();
+  }
+  else{
+        pickables[0].material  = new THREE.MeshNormalMaterial();
+  }
+}
+
+window.focus();
+
+</script>
+</body>
+
+</html>
