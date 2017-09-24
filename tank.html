@@ -2,182 +2,1131 @@
 <html>
 <head>
 <style>
-#info {
-  position: absolute;
-  top: 0px;
-  width: 100%;
-  padding: 10px;
-  text-align: center;
-  color: #ffff00
+.dbutton {
+  padding: 4px;
+  background: green;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-body {
-  overflow: hidden;
+.dbutton.selected {
+  background: orange;
 }
 
 </style>
 
 </head>
-<body>
-  <div id="info">Picking Demo
-  <br/> press ENTER to change camera
-</div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
-<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
-<script src="http://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+<h1 style="text-align:center"> Inelastic collision
+<br>(fire: J)(aim: L)(I and K control to aim)(pick up ball: O)
+</h1>
 
+<hr>
+<div id="container2" style="background:pink; float:left; margin:3px; width:45vw; height:45vw"></div>
+<div id="container" style="float:right; margin:3px; width:45vw; height:45vw"></div>
+<br>
+<hr style="clear:both">
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/87/three.min.js"></script>
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="move.js"></script>
 <script>
-var camera, scene, renderer, light, controls;
-var plane;
-var tank;
-var R = 80;
-var change = 0;
-var go = 0;
-var faxs = new THREE.Object3D();
-var angle= 0;
-var asix0;
-var laser;
+var camera, scene, renderer;
+var camera2, scene2, renderer2;
+
+var controls;
 var keyboard = new KeyboardState();
-var raylaser = new THREE.Raycaster();
+
+var raycaster = new THREE.Raycaster();
+var raycasterR = new THREE.Raycaster();
+var raycasterR2 = new THREE.Raycaster();
+var raycasterR3 = new THREE.Raycaster();
+var raycasterR4 = new THREE.Raycaster();
+var raycasterR5 = new THREE.Raycaster();
+
+var targetarr = [];
+
+var tank, barrel, turret, ball, head;
+var tankP, avatarBody, v, vP = new THREE.Vector3(1, 0, 0);
+
+var cameraOffset;
+var upTemp = new THREE.Vector3();
+
+var go = 0;
+var angle = 0;
+var change = 0;
+var changeX = 0, changeY = 1, changeZ = 0;
+
 var pickables = [];
-var target ;
+var plane = [];
+
+var intersects, intersectsR, intersectsR2, intersectsR3, intersectsR4, intersectsR5;
+var laser, laserR;
+
+var curve;
+var dataPoints = [];
+var uu = 0;
+var fireStart = false;
+var fire = true;
+
+var speed = 0.006;
 
 init();
 animate();
 
-function buildTank() {
-	var tank = new THREE.Object3D();
-  var normalMat = new THREE.MeshNormalMaterial();
+function buildPlane() {
 
-  var body = new THREE.Mesh (new THREE.BoxGeometry (15,3,10), normalMat);
-  body.position.y=1.5;
-  tank.add (body);
-	return tank;
+  var material = new THREE.MeshBasicMaterial({
+    side: THREE.BackSide
+  });
+
+  var plane = new THREE.Mesh(new THREE.PlaneGeometry(150, 150, 32, 32), material);
+
+  return plane;
+
+}
+
+function buildTank() {
+
+  var tank = new THREE.Object3D();
+  var body = new THREE.Mesh(new THREE.BoxGeometry(20, 3, 10), new THREE.MeshBasicMaterial({
+    color: 0x005121
+  }));
+
+  body.position.y = 1.5;
+  tank.add(body);
+
+  return tank;
+
+}
+function buildTarget(){
+  var target = new THREE.Mesh(new THREE.CylinderGeometry(3,3,1.5,35),new THREE.MeshBasicMaterial({
+    color: 0xf7ffaa}));
+  return target;
 }
 
 function init() {
-  scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 100000);
-  camera.position.z = 500;
-  scene.add(camera);
-
-  light = new THREE.PointLight(0xffffff);
-  light.position.set(100, 300, 200);
-  scene.add(light);
-
-  var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
-  scene.add(gridXZ);
+  var ww = $("#container").innerWidth();
+  var hh = $("#container").innerHeight();
 
   renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(ww, hh);
   renderer.setClearColor(0x888888);
+  $("#container").append(renderer.domElement);
 
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  renderer2 = new THREE.WebGLRenderer();
+  renderer2.setSize(ww, hh);
+  renderer2.setClearColor(0xbbbbbb);
+  $("#container2").append(renderer2.domElement);
 
-  document.body.appendChild(renderer.domElement);
-  ////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////
+
+  scene = new THREE.Scene();
+  scene.add(new THREE.AxisHelper(25));
+
+  camera = new THREE.PerspectiveCamera(90, ww / hh, 1, 1000);
+  camera.position.z = 50;
+
+  camera2 = new THREE.PerspectiveCamera(50, ww / hh, 1, 1000);
+  camera2.position.z = 250;
+
+  var grid = new THREE.GridHelper(150, 15, 'red', 'white');
+  //scene.add(grid);
+  grid.position.y = -75;
+
+  controls = new THREE.OrbitControls(camera2, renderer2.domElement);
+
+  //////////////////////////////////////////////////////////////////////////////
+
   tank = buildTank();
-  axis0 = new THREE.Mesh (new THREE.CylinderGeometry (1,1,10), new THREE.MeshBasicMaterial({color:0xff0000}));
-	axis0.position.x=4;
-  axis0.rotation.z=-Math.PI/2;
+  turret = new THREE.Object3D();
 
-  var tower = new THREE.Mesh (new THREE.SphereGeometry( 3, 32, 32 ), new THREE.MeshNormalMaterial());
-	faxs.add(tower);
-  faxs.add(axis0);
-  faxs.position.y=5;
- 	tank.add(faxs);
+  barrel = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 10), new THREE.MeshBasicMaterial({
+    color: 0x222222
+  }));
+  barrel.position.x = 4;
+  barrel.rotation.z = -Math.PI / 2;
 
-  scene.add (tank);
+  head = new THREE.Mesh(new THREE.SphereGeometry(3, 32, 32), new THREE.MeshBasicMaterial({color: 0x664c14}));
 
-  ////////////////////////////////////////////
+  turret.add(head, barrel);
+  turret.position.y = 5;
 
-  target = new THREE.Mesh(new THREE.BoxGeometry(15,15,15),new THREE.MeshNormalMaterial());
-  scene.add(target);
-  target.position.set(50,50,50);
+  tank.add(turret);
+  scene.add(tank);
 
-  pickables.push(target);
+  ////////////////////////////////////////////////////////////////////////
+
+  ball = new THREE.Mesh(new THREE.SphereGeometry(0.9), new THREE.MeshBasicMaterial({
+    color: 0xff0000
+  }));
+  ball.visible = false;
+  ball.position.set(0.-75.0);
+  scene.add(ball);
+
+  for(var i = 0 ; i<6 ; i++){
+    targetarr[i] = buildTarget();
+    scene.add(targetarr[i]);
+  }
+  targetarr[0].position.set(-55,myrand(-65,65),myrand(-65,65));
+  targetarr[0].rotation.y = Math.PI / 2;
+  targetarr[1].position.set(55,myrand(-65,65),myrand(-65,65));
+  targetarr[1].rotation.y = -Math.PI / 2;
+  targetarr[2].position.set(myrand(-65,65),-55,myrand(-65,65));
+  targetarr[2].rotation.x = -Math.PI / 2;
+  targetarr[3].position.set(myrand(-65,65),55,myrand(-65,65));
+  targetarr[3].rotation.x = Math.PI / 2;
+  targetarr[4].position.set(myrand(-65,65),myrand(-65,65),-55);
+  targetarr[5].position.set(myrand(-65,65),myrand(-65,65),55);
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  for (var i = 0; i < 6; i++) {
+
+    plane[i] = buildPlane();
+    plane[i].name = "plane" + i;
+    pickables.push(plane[i]);
+    scene.add(plane[i]);
+
+  }
+
+  plane[0].position.set(75, 0, 0);
+  plane[0].rotation.y = Math.PI / 2;
+  plane[0].material.color = new THREE.Color(0x49a3b7);
+
+  plane[1].position.set(-75, 0, 0);
+  plane[1].rotation.y = -Math.PI / 2;
+  plane[1].material.color = new THREE.Color(0x8749b7);
+
+  plane[2].position.set(0, 75, 0);
+  plane[2].rotation.x = -Math.PI / 2;
+  plane[2].material.color = new THREE.Color(0x408449);
+
+  plane[3].position.set(0, -75, 0)
+  plane[3].rotation.x = Math.PI / 2;
+  plane[3].material.color = new THREE.Color(0xb78549);
+
+  plane[4].position.set(0, 0, 75);
+  plane[4].material.color = new THREE.Color(0xa1b749);
+
+  plane[5].position.set(0, 0, -75);
+  plane[5].rotation.y = Math.PI;
+  plane[5].material.color = new THREE.Color(0x4949b7);
+
+  window.addEventListener('resize', onWindowResize, false);
+
+}
+
+function onWindowResize() {
+
+  var ww = $("#container").innerWidth();
+  var hh = $("#container").innerHeight();
+
+  camera.aspect = ww / hh;
+  camera.updateProjectionMatrix();
+  renderer.setSize(ww, hh);
+
+  camera2.aspect = ww / hh;
+  camera2.updateProjectionMatrix();
+
+  renderer2.setSize(ww, hh);
+
 }
 
 function Matrix4Update(newPos, newDir) {
-	var localX = newDir.clone();
-  var localY = new THREE.Vector3 (0,1,0);
+
+  var localX = newDir.clone();
+  var localY = new THREE.Vector3(changeX, changeY, changeZ);
   var localZ = new THREE.Vector3();
-  localZ.crossVectors (localX, localY);
-  tank.matrix.makeBasis (localX, localY, localZ);
-  tank.matrix.setPosition (newPos);
+  localZ.crossVectors(localX, localY);
+  tank.matrix.makeBasis(localX, localY, localZ);
+  tank.matrix.setPosition(newPos);
   tank.matrixAutoUpdate = false;
+
+}
+function makeLaser() {
+
+  var laserBase = barrel.clone().position;
+  var lineGeometry = new THREE.Geometry();
+  var laserEnd = barrel.clone().worldToLocal(intersects[0].point.clone());
+
+  lineGeometry.vertices.push(new THREE.Vector3(laserBase.x, laserBase.y, laserBase.z), new THREE.Vector3(laserEnd.y, laserEnd.x, laserEnd.z));
+  lineGeometry.computeLineDistances();
+
+  var lineMaterial = new THREE.LineDashedMaterial({
+    color: 0xff0000,
+    dashSize: 10,
+    gapSize: 2
+  });
+
+  var line = new THREE.Line(lineGeometry, lineMaterial);
+
+  return line;
+
+}
+
+function makeLaserR() {
+
+  var laserBase = intersects[0].point;
+  var lineGeometry = new THREE.Geometry();
+  var laserEnd = intersectsR[0].point;
+
+  lineGeometry.vertices.push(laserBase, laserEnd);
+  lineGeometry.computeLineDistances();
+
+  var lineMaterial = new THREE.LineDashedMaterial({
+    color: 0xffffff,
+    dashSize: 10,
+    gapSize: 2
+  });
+
+  var line = new THREE.Line(lineGeometry, lineMaterial);
+
+  return line;
+
+}
+
+function raytest() {
+
+  var laserdir = barrel.clone().localToWorld(new THREE.Vector3(0, 1, 0)).sub(barrel.clone().localToWorld(new THREE.Vector3(0, 0, 0)));
+
+  raycaster.set(barrel.localToWorld(new THREE.Vector3(0, 1, 0)), laserdir);
+  intersects = raycaster.intersectObjects(pickables);
+
+  if (intersects.length > 0) {
+
+    //facePX
+    if (intersects[0].object.name === "plane0") {
+
+      var n = new THREE.Vector3(-1, 0, 0);
+
+    }
+
+    if (intersects[0].object.name === "plane1") {
+
+      n = new THREE.Vector3(1, 0, 0);
+
+    }
+
+    if (intersects[0].object.name === "plane2") {
+
+      n = new THREE.Vector3(0, -1, 0);
+
+    }
+
+    if (intersects[0].object.name === "plane3") {
+
+      n = new THREE.Vector3(0, 1, 0);
+
+    }
+
+    if (intersects[0].object.name === "plane4") {
+
+      n = new THREE.Vector3(0, 0, -1);
+
+    }
+
+    if (intersects[0].object.name === "plane5") {
+
+      n = new THREE.Vector3(0, 0, 1);
+
+    }
+
+      var r = laserdir.sub(n.multiplyScalar(2 * (laserdir.dot(n))));
+
+      raycasterR.set(intersects[0].point, r.normalize());
+      intersectsR = raycasterR.intersectObjects(pickables);
+
+      if (intersectsR.length > 0) {
+
+        //facePX
+        if (intersectsR[0].object.name === "plane0") {
+
+          n = new THREE.Vector3(-1, 0, 0);
+
+        }
+
+        if (intersectsR[0].object.name === "plane1") {
+
+          n = new THREE.Vector3(1, 0, 0);
+
+        }
+
+        if (intersectsR[0].object.name === "plane2") {
+
+          n = new THREE.Vector3(0, -1, 0);
+
+        }
+
+        if (intersectsR[0].object.name === "plane3") {
+
+          n = new THREE.Vector3(0, 1, 0);
+
+        }
+
+        if (intersectsR[0].object.name === "plane4") {
+
+          n = new THREE.Vector3(0, 0, -1);
+
+        }
+
+        if (intersectsR[0].object.name === "plane5") {
+
+          n = new THREE.Vector3(0, 0, 1);
+
+        }
+
+          r = r.sub(n.multiplyScalar(2 * (r.dot(n))));
+
+          raycasterR2.set(intersectsR[0].point, r.normalize());
+          intersectsR2 = raycasterR2.intersectObjects(pickables);
+
+          if (intersectsR2.length > 0) {
+
+            //facePX
+            if (intersectsR2[0].object.name === "plane0") {
+
+              n = new THREE.Vector3(-1, 0, 0);
+
+            }
+
+            if (intersectsR2[0].object.name === "plane1") {
+
+              n = new THREE.Vector3(1, 0, 0);
+
+            }
+
+            if (intersectsR2[0].object.name === "plane2") {
+
+              n = new THREE.Vector3(0, -1, 0);
+
+            }
+
+            if (intersectsR2[0].object.name === "plane3") {
+
+              n = new THREE.Vector3(0, 1, 0);
+
+            }
+
+            if (intersectsR2[0].object.name === "plane4") {
+
+              n = new THREE.Vector3(0, 0, -1);
+
+            }
+
+            if (intersectsR2[0].object.name === "plane5") {
+
+              n = new THREE.Vector3(0, 0, 1);
+
+            }
+
+              r = r.sub(n.multiplyScalar(2 * (r.dot(n))));
+
+              raycasterR3.set(intersectsR2[0].point, r.normalize());
+              intersectsR3 = raycasterR3.intersectObjects(pickables);
+
+              if (intersectsR3.length > 0) {
+
+                //facePX
+                if (intersectsR3[0].object.name === "plane0") {
+
+                  n = new THREE.Vector3(-1, 0, 0);
+
+                }
+
+                if (intersectsR3[0].object.name === "plane1") {
+
+                  n = new THREE.Vector3(1, 0, 0);
+
+                }
+
+                if (intersectsR3[0].object.name === "plane2") {
+
+                  n = new THREE.Vector3(0, -1, 0);
+
+                }
+
+                if (intersectsR3[0].object.name === "plane3") {
+
+                  n = new THREE.Vector3(0, 1, 0);
+
+                }
+
+                if (intersectsR3[0].object.name === "plane4") {
+
+                  n = new THREE.Vector3(0, 0, -1);
+
+                }
+
+                if (intersectsR3[0].object.name === "plane5") {
+
+                  n = new THREE.Vector3(0, 0, 1);
+
+                }
+
+                  r = r.sub(n.multiplyScalar(2 * (r.dot(n))));
+
+                  raycasterR4.set(intersectsR3[0].point, r.normalize());
+                  intersectsR4 = raycasterR4.intersectObjects(pickables);
+
+                  if (intersectsR4.length > 0) {
+
+                    //facePX
+                    if (intersectsR4[0].object.name === "plane0") {
+
+                      n = new THREE.Vector3(-1, 0, 0);
+
+                    }
+
+                    if (intersectsR4[0].object.name === "plane1") {
+
+                      n = new THREE.Vector3(1, 0, 0);
+
+                    }
+
+                    if (intersectsR4[0].object.name === "plane2") {
+
+                      n = new THREE.Vector3(0, -1, 0);
+
+                    }
+
+                    if (intersectsR4[0].object.name === "plane3") {
+
+                      n = new THREE.Vector3(0, 1, 0);
+
+                    }
+
+                    if (intersectsR4[0].object.name === "plane4") {
+
+                      n = new THREE.Vector3(0, 0, -1);
+
+                    }
+
+                    if (intersectsR4[0].object.name === "plane5") {
+
+                      n = new THREE.Vector3(0, 0, 1);
+
+                    }
+
+                      r = r.sub(n.multiplyScalar(2 * (r.dot(n))));
+
+                      raycasterR5.set(intersectsR4[0].point, r.normalize());
+                      intersectsR5 = raycasterR5.intersectObjects(pickables);
+
+                  }
+
+              }
+
+          }
+
+      }
+
+  }
+
+}
+
+function fireMove() {
+
+	dataPoints.push (
+  	barrel.localToWorld(new THREE.Vector3(0, 0, 0)),
+    barrel.localToWorld(new THREE.Vector3(0, 0, 0)).add(barrel.localToWorld(new THREE.Vector3(0, 0, 0)).add(intersects[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    barrel.localToWorld(new THREE.Vector3(0, 0, 0)).add(intersects[0].point).multiplyScalar (1/2),
+    barrel.localToWorld(new THREE.Vector3(0, 0, 0)).add(intersects[0].point).multiplyScalar (1/2).add(intersects[0].point).multiplyScalar (1/2),
+  	intersects[0].point,
+    intersects[0].point,
+    intersects[0].point.clone().add(intersects[0].point.clone().add(intersectsR[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    intersects[0].point.clone().add(intersectsR[0].point).multiplyScalar (1/2),
+    intersects[0].point.clone().add(intersectsR[0].point).multiplyScalar (1/2).add(intersectsR[0].point).multiplyScalar (1/2),
+  	intersectsR[0].point,
+    intersectsR[0].point,
+    intersectsR[0].point.clone().add(intersectsR[0].point.clone().add(intersectsR2[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    intersectsR[0].point.clone().add(intersectsR2[0].point).multiplyScalar (1/2),
+    intersectsR[0].point.clone().add(intersectsR2[0].point).multiplyScalar (1/2).add(intersectsR2[0].point).multiplyScalar (1/2),
+    intersectsR2[0].point,
+    intersectsR2[0].point,
+    intersectsR2[0].point.clone().add(intersectsR2[0].point.clone().add(intersectsR3[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    intersectsR2[0].point.clone().add(intersectsR3[0].point).multiplyScalar (1/2),
+    intersectsR2[0].point.clone().add(intersectsR3[0].point).multiplyScalar (1/2).add(intersectsR3[0].point).multiplyScalar (1/2),
+    intersectsR3[0].point,
+    intersectsR3[0].point,
+    intersectsR3[0].point.clone().add(intersectsR3[0].point.clone().add(intersectsR4[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    intersectsR3[0].point.clone().add(intersectsR4[0].point).multiplyScalar (1/2),
+    intersectsR3[0].point.clone().add(intersectsR4[0].point).multiplyScalar (1/2).add(intersectsR4[0].point).multiplyScalar (1/2),
+    intersectsR4[0].point,
+    intersectsR4[0].point,
+    intersectsR4[0].point.clone().add(intersectsR4[0].point.clone().add(intersectsR5[0].point).multiplyScalar (1/2)).multiplyScalar (1/2),
+    intersectsR4[0].point.clone().add(intersectsR5[0].point).multiplyScalar (1/2),
+    intersectsR4[0].point.clone().add(intersectsR5[0].point).multiplyScalar (1/2).add(intersectsR5[0].point).multiplyScalar (1/2),
+    intersectsR5[0].point,
+    intersectsR5[0].point
+  );
+
+  curve = new THREE.CatmullRomCurve3(dataPoints);
+  curve.type = "catmullrom";
+
 }
 
 function animate() {
 
-	keyboard.update();
+  keyboard.update();
+  raytest();
 
   if (keyboard.pressed("W")) {
+
     go += 3;
-    faxs.remove(laser);
+
+    turret.remove(laser);
+		scene.remove(laserR);
+
   }
 
   if (keyboard.pressed("A")) {
+
     change += 0.1;
-    faxs.remove(laser);
+
+    turret.remove(laser);
+    scene.remove(laserR);
+
   }
 
   if (keyboard.pressed("D")) {
+
     change += -0.1;
-    faxs.remove(laser);
+
+    turret.remove(laser);
+    scene.remove(laserR);
+
   }
-  if(keyboard.pressed("J")){
-  	angle+=0.05;
-    faxs.rotation.z=angle;
+
+  if (keyboard.pressed("I")) {
+
+    if(angle < Math.PI / 2){
+
+        angle += 0.05;
+        turret.rotation.z = angle;
+
+    }
+
+    turret.remove(laser);
+    scene.remove(laserR);
+
   }
- if(keyboard.pressed("K")){
-  	angle-=0.05;
-    faxs.rotation.z=angle;
+
+  if (keyboard.pressed("K")) {
+
+    if(angle > 0){
+
+        angle -= 0.05;
+        turret.rotation.z = angle;
+
+    }
+
+    turret.remove(laser);
+    scene.remove(laserR);
+
   }
-  if(keyboard.down("space")){
+
+  if (keyboard.down("L")) {
+
     laser = makeLaser();
-    faxs.add(laser);
+    laserR = makeLaserR();
+
+    turret.add(laser);
+    scene.add(laserR);
+
   }
-  raytest();
+
+  if (keyboard.up("L")) {
+
+    turret.remove(laser);
+    scene.remove(laserR);
+
+  }
+
+  if(tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).x - 1 <= tank.position.x + 10 && tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).x + 1 >= tank.position.x - 10 && tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).y - 1 <= tank.position.y + 1.5 && tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).y + 1 >= tank.position.y - 1.5 && tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).z - 1 <= tank.position.z + 5 && tank.worldToLocal(ball.localToWorld(new THREE.Vector3(0, 0, 0))).z + 1 >= tank.position.z - 5 && fire === false){
+  	if(ball.visible === true)
+    	head.material.color = new THREE.Color(0xffff00);
+
+  	if (keyboard.down("O")) {
+
+      ball.visible = false;
+      fire = true;
+
+    }
+
+    }
+    else
+    	head.material.color = new THREE.Color(0x664c14);
+
+  if(fire){
+
+    if (keyboard.down("J")) {
+
+      ball.position.copy(barrel.localToWorld(new THREE.Vector3(0, 0, 0)));
+      ball.visible = true;
+      fireMove();
+      fireStart = true;
+      fire = false;
+      dataPoints = [];
+      uu = 0;
+      speed = 0.006;
+      ball.material.color = new THREE.Color(0xff0000);
+
+    }
+
+  }
+
+  if(fireStart){
+
+    uu += speed;
+
+		if(uu <= 1)
+    	ball.position.copy(curve.getPointAt (uu));
 
 
-	var newPos = tank.localToWorld (new THREE.Vector3 (go, 0, 0));
-  var newDir = new THREE.Vector3 (1, 0, 0);
-  newDir.applyAxisAngle ( new THREE.Vector3(0, 1, 0), change );
-  Matrix4Update(newPos, newDir);
- 	go=0;
+    if (ball.position.x + 1 >= 75 || ball.position.x - 1 <= -75 || ball.position.y + 1 >= 75 || ball.position.y - 1 < -75 || ball.position.z + 1 > 75 || ball.position.z - 1 < -75)
+    	if(speed > 0.0015)
+    		speed += -0.0003;
+
+    if(speed < 0.002)
+    	ball.material.color = new THREE.Color(0x0000ff);
+
+
+		if(uu > 1){
+
+    	dataPoints = [];
+    	fireStart = false;
+      uu = 0;
+      speed = 0.006;
+
+  	}
+
+  }
+
+  var detection = tank.localToWorld(new THREE.Vector3(10, 0, 0));
+  //console.log(detection);
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //faceNy, up = +Y = Vector3(0, 1, 0)
+  if (changeX === 0 && changeY === 1 && changeZ === 0 && detection.x <= 75 && detection.x >= -75 && detection.z <= 75 && detection.z >= -75)
+    moveOnNy();
+
+  //change to facePx
+  if (changeX === 0 && changeY === 1 && changeZ === 0 && detection.x > 75) {
+
+    changeX = -1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+
+  }
+
+  //change to faceNx
+  if (changeX === 0 && changeY === 1 && changeZ === 0 && detection.x < -75) {
+
+    changeX = 1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+  }
+
+  //change to faceNz
+  if (changeX === 0 && changeY === 1 && changeZ === 0 && detection.z < -75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = 1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
+  }
+
+  //change to facePz
+  if (changeX === 0 && changeY === 1 && changeZ === 0 && detection.z > 75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = -1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //facePx, up = -x = Vector3(-1, 0, 0)
+  if (changeX === -1 && changeY === 0 && changeZ === 0 && detection.y <= 75 && detection.y >= -75 && detection.z <= 75 && detection.z >= -75)
+    moveOnPx();
+
+  //change to facePy
+  if (changeX === -1 && changeY === 0 && changeZ === 0 && detection.y > 75) {
+
+    changeX = 0;
+    changeY = -1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+
+  }
+
+  //change to faceNy
+  if (changeX === -1 && changeY === 0 && changeZ === 0 && detection.y < -75) {
+
+    changeX = 0;
+    changeY = 1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+  }
+
+  //change to faceNz
+  if (changeX === -1 && changeY === 0 && changeZ === 0 && detection.z < -75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = 1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+  }
+
+  //change to facePz
+  if (changeX === -1 && changeY === 0 && changeZ === 0 && detection.z > 75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = -1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //facePy, up = -Y = Vector3(0, -1, 0)
+  if (changeX === 0 && changeY === -1 && changeZ === 0 && detection.x <= 75 && detection.x >= -75 && detection.z <= 75 && detection.z >= -75)
+    moveOnPy();
+
+  //change to faceNx
+  if (changeX === 0 && changeY === -1 && changeZ === 0 && detection.x < -75) {
+
+    changeX = 1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+
+  }
+
+  //change to facePx
+  if (changeX === 0 && changeY === -1 && changeZ === 0 && detection.x > 75) {
+
+    changeX = -1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+  }
+
+  //change to facePz
+  if (changeX === 0 && changeY === -1 && changeZ === 0 && detection.z > 75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = -1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
+  }
+
+  //change to faceNz
+  if (changeX === 0 && changeY === -1 && changeZ === 0 && detection.z < -75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = 1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //faceNx, up = x = Vector3(1, 0, 0)
+  if (changeX === 1 && changeY === 0 && changeZ === 0 && detection.y <= 75 && detection.y >= -75 && detection.z <= 75 && detection.z >= -75)
+    moveOnNx();
+
+  //change to faceNy
+  if (changeX === 1 && changeY === 0 && changeZ === 0 && detection.y < -75) {
+
+    changeX = 0;
+    changeY = 1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+
+  }
+
+  //change to facePy
+  if (changeX === 1 && changeY === 0 && changeZ === 0 && detection.y > 75) {
+
+    changeX = 0;
+    changeY = -1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+  }
+
+  //change to facePz
+  if (changeX === 1 && changeY === 0 && changeZ === 0 && detection.z > 75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = -1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+  }
+
+  //change to faceNz
+  if (changeX === 1 && changeY === 0 && changeZ === 0 && detection.z < -75) {
+
+    changeX = 0;
+    changeY = 0;
+    changeZ = 1;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //faceNz, up = +z = Vector3(0, 0, 1)
+  if (changeX === 0 && changeY === 0 && changeZ === 1 && detection.y <= 75 && detection.y >= -75 && detection.x <= 75 && detection.x >= -75)
+    moveOnNz();
+
+  //change to facePy
+  if (changeX === 0 && changeY === 0 && changeZ === 1 && detection.y > 75) {
+
+    changeX = 0;
+    changeY = -1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
+  }
+
+  //change to faceNy
+  if (changeX === 0 && changeY === 0 && changeZ === 1 && detection.y < -75) {
+
+    changeX = 0;
+    changeY = 1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+
+  }
+
+  //change to faceNx
+  if (changeX === 0 && changeY === 0 && changeZ === 1 && detection.x < -75) {
+
+    changeX = 1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+  }
+
+  //change to facePx
+  if (changeX === 0 && changeY === 0 && changeZ === 1 && detection.x > 75) {
+
+    changeX = -1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //facePz, up = -z = Vector3(0, 0, -1)
+  if (changeX === 0 && changeY === 0 && changeZ === -1 && detection.y <= 75 && detection.y >= -75 && detection.x <= 75 && detection.x >= -75)
+    moveOnPz();
+
+  //change to faceNy
+  if (changeX === 0 && changeY === 0 && changeZ === -1 && detection.y < -75) {
+
+    changeX = 0;
+    changeY = 1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+
+  }
+
+  //change to facePy
+  if (changeX === 0 && changeY === 0 && changeZ === -1 && detection.y > 75) {
+
+    changeX = 0;
+    changeY = -1;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+
+  }
+
+  //change to facePx
+  if (changeX === 0 && changeY === 0 && changeZ === -1 && detection.x > 75) {
+
+    changeX = -1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+  }
+
+  //change to faceNx
+  if (changeX === 0 && changeY === 0 && changeZ === -1 && detection.x < -75) {
+
+    changeX = 1;
+    changeY = 0;
+    changeZ = 0;
+
+    avatarBody = detection.clone().sub(tank.localToWorld(new THREE.Vector3(0, 0, 0)));
+    tankP = tank.clone().localToWorld(new THREE.Vector3(0, 0, 0)).add(avatarBody.clone().add(avatarBody));
+    v = tankP.clone().sub(detection);
+    vP = v.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  go = 0;
+  change = 0;
+  Targeting();
   controls.update();
   requestAnimationFrame(animate);
   render();
+
 }
 
-function makeLaser(){
-  var laserbody = axis0.clone().position;
-  var lineGeometry = new THREE.Geometry();
-  lineGeometry.vertices.push( new THREE.Vector3(laserbody.x,laserbody.y,laserbody.z), new THREE.Vector3(laserbody.x*5,laserbody.y*5,laserbody.z*5) ,new THREE.Vector3(laserbody.x*40,laserbody.y*40,laserbody.z*40) );
-  lineGeometry.computeLineDistances();
-  var lineMaterial = new THREE.LineDashedMaterial( { color: 0x0000ff, dashSize: 3, gapSize: 2 } );
-  var line = new THREE.Line( lineGeometry, lineMaterial );
+function Targeting(){
 
-  return line;
+  if(ball.position.distanceTo(targetarr[0].position)<5){
+    targetarr[0].position.set(-55,myrand(-65,65),myrand(-65,65));
+    targetarr[0].rotation.x=myrand(0,3);
+  }
+  if(ball.position.distanceTo(targetarr[1].position)<5){
+    targetarr[1].position.set(55,myrand(-65,65),myrand(-65,65));
+    targetarr[1].rotation.x=myrand(0,3);
+  }
+  if(ball.position.distanceTo(targetarr[2].position)<5){
+    targetarr[2].position.set(myrand(-65,65),-55,myrand(-65,65));
+    targetarr[2].rotation.x=myrand(0,3);
+  }
+  if(ball.position.distanceTo(targetarr[3].position)<5){
+    targetarr[3].position.set(myrand(-65,65),55,myrand(-65,65));
+    targetarr[3].rotation.x=myrand(0,3);
+  }
+  if(ball.position.distanceTo(targetarr[4].position)<5){
+    targetarr[4].position.set(myrand(-65,65),myrand(-65,65),-55);
+    targetarr[4].rotation.x=myrand(0,3);
+  }
+  if(ball.position.distanceTo(targetarr[5].position)<5){
+    targetarr[5].position.set(myrand(-65,65),myrand(-65,65),55);
+    targetarr[5].rotation.x=myrand(0,3);
+  }
+
 }
 
 function render() {
   renderer.render(scene, camera);
+  renderer2.render(scene, camera2);
 }
 
-function raytest(){
-  var laserdir = axis0.clone().localToWorld(new THREE.Vector3(0,1,0)).sub(axis0.clone().localToWorld(new THREE.Vector3(0,0,0)));
-  raylaser.set(axis0.localToWorld(new THREE.Vector3(0,1,0)), laserdir);
-  console.log(raylaser);
-  var intersects = raylaser.intersectObjects(pickables);
-  if (intersects.length > 0) {
-      pickables[0].material  = new THREE.MeshBasicMaterial();
-  }
-  else{
-        pickables[0].material  = new THREE.MeshNormalMaterial();
-  }
+function myrand(min,max){
+  return Math.floor(Math.random()*(max-min+1)+min);
 }
 
 window.focus();
