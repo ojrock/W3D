@@ -18,7 +18,9 @@ body {
 </head>
 <body>
 	<div id="info">
-	 	123
+	 	press w a s d to control car  <br>
+					home to star<br>
+					space to break
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
 	<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
@@ -87,13 +89,15 @@ function init() {
     objLoader.setPath('Resoures/');
     objLoader.load('camero-2010-low-poly.obj', function(object) {
 
-			var theObject =  unitize (object, 80);
+
+			var theObject =  unitize (object, 60);
+			theObject.rotation.y=Math.PI/2;
 
 
-			car = theObject.clone();
+			car.add(theObject.clone());
 			scene.add(car);
 
-			scene.add (theObject);
+			//scene.add (theObject);
 
 			scene.add (new THREE.BoxHelper (theObject));
 
