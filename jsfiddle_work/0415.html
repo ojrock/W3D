@@ -89,8 +89,12 @@ function init() {
     objLoader.setPath('Resoures/');
     objLoader.load('camero-2010-low-poly.obj', function(object) {
 
+<<<<<<< HEAD
 			var theObject =  unitize (object, 20);
 			theObject.rotation.y=Math.PI/2;
+=======
+			var theObject =  unitize (object, 40);
+>>>>>>> master
 
 			car.add(theObject.clone());
 			scene.add(car);
