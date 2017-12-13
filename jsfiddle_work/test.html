@@ -49,6 +49,7 @@ body {
 
   var changeX = 0, changeY = 1, changeZ = 0;
 
+  var Objcar = new THREE.Object3D();
   var carP;
   var newCarP;
   var avatarBody;
@@ -116,18 +117,49 @@ body {
 
     scene.add(grid);
     controls = new THREE.OrbitControls(camera2, renderer2.domElement);
-
+    var ambient = new THREE.AmbientLight(0x999999);
+	  scene.add(ambient);
     //////////////////////////////////////////////////////////////////////////////
 
     car = new THREE.Object3D();
     car.add(buildCarModel());
     scene.add(car);
+    /////////////////////////////////////////////////////////////////////////
+    var mtlLoader = new THREE.MTLLoader();
+    mtlLoader.setPath('Resoures/');
+   	mtlLoader.load('camero-2010-low-poly.mtl', function(materials) {
+      materials.preload();
+
+      var objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.setPath('Resoures/');
+      objLoader.load('camero-2010-low-poly.obj', function(object) {
 
 
+
+  			var theObject =  unitize (object, 60);
+  			theObject.rotation.y=Math.PI/2;
+
+
+  			car.add(theObject.clone());
+  			scene.add(car);
+
+  			//scene.add (theObject);
+
+  			scene.add (new THREE.BoxHelper (theObject));
+
+  			object.traverse (
+  				function(mesh) {
+  					if (mesh instanceof THREE.Mesh) {
+  						mesh.material.side = THREE.DoubleSide;
+  					}
+  				});
+
+      });
+
+    });
     window.addEventListener('resize', onWindowResize, false);
-
   }
-
   function onWindowResize() {
 
     var ww = $("#container").innerWidth();
@@ -211,8 +243,6 @@ body {
     renderer2.render(scene, camera2);
   }
 
-  window.focus();
-
   function unitize (object, targetSize) {
 
   	// find bounding box of 'object'
@@ -249,7 +279,6 @@ body {
 
   }
 </script>
-
 </body>
 
 </html>

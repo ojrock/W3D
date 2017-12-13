@@ -81,13 +81,13 @@ function init() {
 
   var mtlLoader = new THREE.MTLLoader();
   mtlLoader.setPath('Resoures/');
- 	mtlLoader.load('nissan-gt-r-nismo.mtl', function(materials) {
+ 	mtlLoader.load('camero-2010-low-poly.mtl', function(materials) {
     materials.preload();
 
     var objLoader = new THREE.OBJLoader();
     objLoader.setMaterials(materials);
     objLoader.setPath('Resoures/');
-    objLoader.load('nissan-gt-r-nismo.obj', function(object) {
+    objLoader.load('camero-2010-low-poly.obj', function(object) {
 
 
 
